@@ -27,13 +27,14 @@ router = APIRouter()
 @safeExecution
 async def getUserDocument(request: Request):
     user_id = getattr(request.state, "user_id", None)
+    session_id = getattr(request.state,"session_id",None)
     if user_id is None:
         return {"success": False, "message": "please login to get the document"}
     db = request.app.state.zensky_db
     docs_col = db["Documents"]
     # user_docs = docs_col.find({"user_id": user_id}).to_list(length=None) or []
     user_docs = list(docs_col.find())
-    print(user_docs)
+    # print(user_docs)
 
     for doc in user_docs:
         doc["_id"] = str(doc["_id"])
@@ -44,9 +45,9 @@ async def getUserDocument(request: Request):
 @router.post("/document/upload_document")
 @safeExecution
 async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...)):
-    print(request.state)
+    # print(request.state)
     user_id = getattr(request.state, "user_id", None)
-    print(user_id)
+    # print(user_id)
     if user_id is None:
         return {"success": False, "message": "Please login to upload a document"}
 
@@ -59,7 +60,7 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
             shutil.copyfileobj(file.file, buffer)
 
     session_id = getattr(request.state, "session_id", None)
-    print(session_id)
+    # print(session_id)
     if session_id is None:
         return {"success": False, "message": "Can't upload document at the moment"}
 
@@ -88,13 +89,13 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
         }
         new_doc = docs_col.insert_one(new_doc_info)
         user_docs.append({"id":str(new_doc.inserted_id)})
-        print("new doc ", new_doc)
+        # print("new doc ", new_doc)
         chunks = chunk_text_manual(path, 500)
         if chunks is not None:
             chunks = chunks[0]
             contents = [chunk["content"] for chunk in chunks]
-            print(path)
-            print(len(contents))
+            # print(path)
+            # print(len(contents))
             embeddings = encodeChunksManual(contents)
             if len(embeddings) == 0:
                 continue

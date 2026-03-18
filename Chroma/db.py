@@ -12,6 +12,7 @@ def instantiate_chroma():
 
 @safeExecution
 def add_to_chat_collection(ids, chat_collection, embeddings, chunks, metadata):
+    # print(metadata)
     chat_collection.add(
         ids=ids, embeddings=embeddings, documents=chunks, metadatas=metadata
     )

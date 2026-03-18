@@ -14,6 +14,7 @@ import os
 import jwt
 from dotenv import load_dotenv
 from starlette.middleware.sessions import SessionMiddleware
+import uuid
 
 load_dotenv()
 
@@ -67,23 +68,28 @@ async def authenticate(request: Request, call_next):
         session_id = request.cookies.get("session_id")
         session = sessions.get(session_id)
         user_id = None
+        # print(request.cookies)
+        # print(auth_token)
+        print(session_id)
         if auth_token:
             try:
                 payload = jwt.decode(auth_token, os.environ["JWT_SECRET"],algorithms=["HS256"])
-                print(payload)
+                # print(payload)
                 user_id = payload.get("user_id")
-                print(user_id)
+                # print(user_id)
             except jwt.InvalidTokenError as e:
                 print(e)
                 pass
 
         if not session:
             session_id = str(uuid.uuid4())
+            new_chat_id = str(uuid.uuid4())
             session = {
                 "session_id": session_id,
                 "messages": [],
                 "request_count": 1,
                 "user_id": user_id,
+                "current_chat_id":new_chat_id
             }
             sessions[session_id] = session
             request.state.session_id = session_id
