@@ -67,6 +67,21 @@ def tokens_to_text(tokens, Tokenizer):
     return Tokenizer.decode(tokens, skip_special_tokens=True)
 
 
+"""
+    # print(chat_id)
+    # message = format_user_query(query, ordered_documents, ordered_chats)
+
+    # inputs = format_messages(message, tokenizer)
+
+    # streamer = generate_response(
+    #     inputs,
+    #     model,
+    #     tokenizer,
+    #     200,
+    #     creativity_levels[creativity],
+    # )
+"""
+
 # {%- if tools %}
 #     {{- '<|im_start|>system\n' }}
 #     {%- if messages[0]['role'] == 'system' %}

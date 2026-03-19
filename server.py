@@ -18,14 +18,14 @@ import uuid
 
 load_dotenv()
 
-sessions = {}
+# sessions = {}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting server...")
     from Model.load_model import get_model
-
+    app.state.sessions = {}
     print("Loading model...")
     # model, tokenizer = get_model()
     # app.state.model = model
@@ -66,11 +66,11 @@ async def authenticate(request: Request, call_next):
     try:
         auth_token = request.cookies.get("zensky-jwt-token")
         session_id = request.cookies.get("session_id")
-        session = sessions.get(session_id)
+        session = app.state.sessions.get(session_id)
         user_id = None
         # print(request.cookies)
         # print(auth_token)
-        print(session_id)
+        # print(session_id)
         if auth_token:
             try:
                 payload = jwt.decode(auth_token, os.environ["JWT_SECRET"],algorithms=["HS256"])
@@ -91,11 +91,11 @@ async def authenticate(request: Request, call_next):
                 "user_id": user_id,
                 "current_chat_id":new_chat_id
             }
-            sessions[session_id] = session
+            app.state.sessions[session_id] = session
             request.state.session_id = session_id
             request.state.session = session
             request.state.user_id = user_id
-            print(request.state.user_id)
+            # print(request.state.user_id)
             response = await call_next(request)
             response.set_cookie(
                 key="session_id",

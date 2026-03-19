@@ -4,6 +4,7 @@ from utils.safeExecution import safeExecution
 import torch
 import pymupdf
 import time
+import uuid
 from utils.orderDocs import orderDocument, orderChats
 from fastapi.responses import StreamingResponse, Response
 
@@ -39,6 +40,16 @@ from Chroma.db import (
 
 router = APIRouter()
 
+@router.get("/chat/newChat")
+@safeExecution
+def create_new_chat(request:Request):
+    new_chat_id = uuid.uuid4()
+    sessions = request.app.state.sessions
+    session_id = getattr(request.state,"session_id",None)
+    if session_id:
+        sessions[session_id]["current_chat_id"] = new_chat_id
+    return {"success": True, "chatId": new_chat_id}
+
 
 @router.post("/chat/query")
 @safeExecution
@@ -50,9 +61,6 @@ async def handle_chat_response(request: Request):
     db = request.app.state.zensky_db
     chat_col = db["Chats"]
 
-    # model = request.app.state.model
-    # tokenizer = request.app.state.tokenizer
-    # print(body)
     query = body["query"]
     selected_chat_id = body["selected_chat_id"]
     chat_id = request.state.session.get("current_chat_id")
@@ -60,42 +68,32 @@ async def handle_chat_response(request: Request):
     chat_id_using = selected_chat_id or chat_id
     print("chat_id_using : ", chat_id_using)
     document_ids = body["document_ids"] if "document_ids" in body else []
-    # print(document_ids)
     query = queryPreprocessing(query)
-    # print(query)
 
     creativity = body["creativity"] or "medium"
-    session_id = request.state.session_id
+    session_id = getattr(request.state,"session_id",None)
     embeddings = encodeChunksManual([query])
 
     document_collection = request.app.state.document_collection
-    # print(document_collection.get()["ids"])
     relevant_docs = query_document_collection(
         document_collection=document_collection,
         query_embedding=embeddings,
         top_k=5,
         condition={"document_id": {"$in": document_ids}},
     )
-    # print(relevant_docs)
-
     ordered_documents = orderDocument(
         relevant_docs["metadatas"][0],
         relevant_docs["documents"][0],
     )
 
-    # print(ordered_documents)
 
     chat_collection = request.app.state.chat_collection
     condition = {}
-
     condition["chat_id"] = chat_id_using or ""
-
     if session_id:
         condition["session_id"] = session_id
-
     if user_id:
         condition["user_id"] = user_id
-    # print(condition)
 
     relevant_chats = query_chat_collection(
         chat_collection=chat_collection,
@@ -103,10 +101,7 @@ async def handle_chat_response(request: Request):
         top_k=5,
         condition=condition,
     )
-    # print(relevant_chats)
-
     ids = relevant_chats["ids"]
-
     ordered_chats = (
         orderChats(
             relevant_chats["metadatas"][0],
@@ -120,18 +115,7 @@ async def handle_chat_response(request: Request):
     if  chat_id_using is not None:
         chat_document = chat_col.find_one({"chat_id": chat_id_using})
     print(chat_document)
-    # print(chat_id)
-    # message = format_user_query(query, ordered_documents, ordered_chats)
 
-    # inputs = format_messages(message, tokenizer)
-
-    # streamer = generate_response(
-    #     inputs,
-    #     model,
-    #     tokenizer,
-    #     200,
-    #     creativity_levels[creativity],
-    # )
     client = request.app.state.client
     if client is None:
         return {"success": False, "message": "Failed to respond to query."}
@@ -141,7 +125,7 @@ async def handle_chat_response(request: Request):
     You are a helpful assistant.
 
     Answer the user ONLY using the provided context.
-    If the answer is not in the context, say "I don't know".
+    If the answer is not in the context, try to fulfill user's query using your pretrained knowledge but keep the context maintain, and softly deny the query if you have no answer.
 
     <context>
     {content}
@@ -282,14 +266,20 @@ from bson import ObjectId
 async def getUserChats(request: Request, response: Response):
     user_id = getattr(request.state, "user_id", None)
     # chat_id = b ody["chat_id"] or None
+    print(user_id)
     if user_id is None:
         return {"success": False, "chats": None}
     # if chat_id is None: # return {"success": True, "chats": []}
     db = request.app.state.zensky_db
     chat_col = db["Chats"]
+
+    # chat_collection = request.app.state.chat_collection
+    # allIds = chat_collection.get()['ids']
+    # chat_collection.delete(ids=allIds)
+
     user_chats_cursor = chat_col.find({"user_id": user_id})
     user_chats = [serialize_chat(chat) for chat in user_chats_cursor]
-    print(user_chats)
+    # print(user_chats)
     return {"success": True, "chats": user_chats}
 
 
@@ -304,3 +294,17 @@ def getChatId(request: Request):
     current_chat_id = request.state.session.get("current_chat_id")
     print(current_chat_id)
     return {"success": True, "chatId": current_chat_id}
+
+
+@router.post('/chat/setChatId')
+@safeExecution
+async def setChatId(request:Request):
+    sessions = request.app.state.sessions
+    body = await request.json()
+    clientChatId = body["chatId"]
+    print("client chat id",clientChatId)
+    session_id = getattr(request.state, "session_id", None)
+    print(session_id)
+    if session_id and clientChatId:
+        sessions[session_id]["current_chat_id"] = clientChatId
+    return {"success": True}
