@@ -12,7 +12,11 @@ uri = os.environ.get("MONGO_URI")
 # Create a new client and connect to the server
 def connect_db():
     client = MongoClient(
-        uri, server_api=ServerApi("1"), tls=True, tlsCAFile=certifi.where()
+        uri,
+        server_api=ServerApi("1"),
+        tls=True,
+        tlsCAFile=certifi.where(),
+        uuidRepresentation="standard",
     )
     # Send a ping to confirm a successful connection
     try:

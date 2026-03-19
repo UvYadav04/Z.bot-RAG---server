@@ -51,6 +51,50 @@ def create_new_chat(request:Request):
     return {"success": True, "chatId": new_chat_id}
 
 
+from bson import ObjectId
+
+
+@router.get("/chat/getChats")
+@safeExecution
+async def getUserChats(request: Request, response: Response):
+    user_id = getattr(request.state, "user_id", None)
+    session_id = getattr(request.state, "session_id", None)
+    if session_id is None:
+        return {"success": False, "chats": None}
+    db = request.app.state.zensky_db
+    chat_col = db["Chats"]
+    user_chats_cursor = chat_col.find({"user_id": user_id or "no_user_id","session_id":session_id})
+    user_chats = [serialize_chat(chat) for chat in user_chats_cursor]
+    return {"success": True, "chats": user_chats}
+
+
+def serialize_chat(chat):
+    chat["_id"] = str(chat["_id"])
+    return chat
+
+
+@router.get("/chat/getChatId")
+@safeExecution
+def getChatId(request: Request):
+    current_chat_id = request.state.session.get("current_chat_id")
+    print(current_chat_id)
+    return {"success": True, "chatId": current_chat_id}
+
+
+@router.post("/chat/setChatId")
+@safeExecution
+async def setChatId(request: Request):
+    sessions = request.app.state.sessions
+    body = await request.json()
+    clientChatId = body["chatId"]
+    print("client chat id", clientChatId)
+    session_id = getattr(request.state, "session_id", None)
+    print(session_id)
+    if session_id and clientChatId:
+        sessions[session_id]["current_chat_id"] = clientChatId
+    return {"success": True}
+
+
 @router.post("/chat/query")
 @safeExecution
 async def handle_chat_response(request: Request):
@@ -114,7 +158,6 @@ async def handle_chat_response(request: Request):
 
     if  chat_id_using is not None:
         chat_document = chat_col.find_one({"chat_id": chat_id_using})
-    print(chat_document)
 
     client = request.app.state.client
     if client is None:
@@ -142,56 +185,6 @@ async def handle_chat_response(request: Request):
         stream=True,
     )
 
-    # Streaming generator
-    # async def token_generator():
-
-    #     response_tokens = ""
-    #     endTime = None
-
-    #     for token in stream:
-    #         if endTime is None:
-    #             endTime = time.time()
-    #         content = token.choices[0].delta.content
-    #         # print(content)
-    #         if content:
-    #             response_tokens += content
-    #             yield content  # send token to client immediately
-    #     # print(response_tokens)
-    #     timestamp = datetime.now()
-    #     # AFTER STREAM FINISHES
-    #     final_response = "".join(response_tokens)
-
-    #     if chat_document is None:
-    #         chat_col.insert_one(
-    #             {
-    #                 "createdAt": timestamp,
-    #                 "chat_id": chat_id,
-    #                 "messages": [{"user": query, "assistant": final_response}],
-    #                 "user_id": user_id,
-    #                 "session_id": session_id,
-    #             }
-    #         )
-    #     chat_col.update_one(
-    #         {"chat_id": chat_id, "user_id": "user_id"},
-    #         {"$push": {"messages": {"user": query, "assistant": final_response}}},
-    #     )
-    #     user_chats = chat_col.find({"user_id": user_id})
-    #     print(user_chats)
-    #     chat_embeddings = encodeChunksManual([final_response])
-    #     add_to_chat_collection(
-    #         ids=[str(timestamp)],
-    #         chat_collection=chat_collection,
-    #         embeddings=chat_embeddings,
-    #         chunks=[final_response],
-    #         metadata=[
-    #             {
-    #                 "session_id": session_id,
-    #                 "timestamp": str(timestamp),
-    #                 "user_id": user_id,
-    #                 "chat_id": chat_id,
-    #             }
-    #         ],
-    #     )
     async def token_generator():
         response_tokens = ""
 
@@ -216,14 +209,14 @@ async def handle_chat_response(request: Request):
                             {"role": "user", "content": query},
                             {"role": "assistant", "content": final_response},
                         ],
-                        "user_id": user_id,
+                        "user_id": user_id or "no_user_id",
                         "session_id": session_id,
                         "name": query
                     }
                 )
             else:
                 chat_col.update_one(
-                    {"chat_id":chat_id_using, "user_id": user_id},
+                    {"chat_id":chat_id_using, "user_id": user_id or "no_user_id","session_id":session_id},
                     {
                         "$push": {
                             "messages": {
@@ -245,7 +238,7 @@ async def handle_chat_response(request: Request):
                     {
                         "session_id": session_id,
                         "timestamp": str(timestamp),
-                        "user_id": user_id,
+                        "user_id": user_id or "no_user_id",
                         "chat_id": chat_id_using,
                     }
                 ],
@@ -256,55 +249,3 @@ async def handle_chat_response(request: Request):
 
     return StreamingResponse(token_generator(), media_type="text/plain")
     # return {"success": True, "chat_id": chat_id}
-
-
-from bson import ObjectId
-
-
-@router.get("/chat/getChats")
-@safeExecution
-async def getUserChats(request: Request, response: Response):
-    user_id = getattr(request.state, "user_id", None)
-    # chat_id = b ody["chat_id"] or None
-    print(user_id)
-    if user_id is None:
-        return {"success": False, "chats": None}
-    # if chat_id is None: # return {"success": True, "chats": []}
-    db = request.app.state.zensky_db
-    chat_col = db["Chats"]
-
-    # chat_collection = request.app.state.chat_collection
-    # allIds = chat_collection.get()['ids']
-    # chat_collection.delete(ids=allIds)
-
-    user_chats_cursor = chat_col.find({"user_id": user_id})
-    user_chats = [serialize_chat(chat) for chat in user_chats_cursor]
-    # print(user_chats)
-    return {"success": True, "chats": user_chats}
-
-
-def serialize_chat(chat):
-    chat["_id"] = str(chat["_id"])
-    return chat
-
-
-@router.get("/chat/getChatId")
-@safeExecution
-def getChatId(request: Request):
-    current_chat_id = request.state.session.get("current_chat_id")
-    print(current_chat_id)
-    return {"success": True, "chatId": current_chat_id}
-
-
-@router.post('/chat/setChatId')
-@safeExecution
-async def setChatId(request:Request):
-    sessions = request.app.state.sessions
-    body = await request.json()
-    clientChatId = body["chatId"]
-    print("client chat id",clientChatId)
-    session_id = getattr(request.state, "session_id", None)
-    print(session_id)
-    if session_id and clientChatId:
-        sessions[session_id]["current_chat_id"] = clientChatId
-    return {"success": True}
