@@ -247,8 +247,8 @@ POST /chat/query
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/z-bot.git
-cd z-bot/server
+git clone [https://github.com/your-username/z-bot.git](https://github.com/UvYadav04/Z.bot-RAG---server)
+cd Z.bot-RAG---server
 ```
 
 ---
