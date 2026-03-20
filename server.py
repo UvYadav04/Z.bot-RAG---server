@@ -50,8 +50,6 @@ if type(origins_allowed) == list:
 else:
     origins = origins_allowed
 
-print(origins)
-
 app = FastAPI(title="Basic FastAPI Server", version="1.0", lifespan=lifespan)
 
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET"))
