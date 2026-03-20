@@ -41,11 +41,16 @@ async def lifespan(app: FastAPI):
     qdrant_client = instantiate_chroma()
     app.state.qdrant_client = qdrant_client
 
-
     yield
     print("Server shutting down...")
 
-origins = [os.environ.get("ORIGINS")]
+origins_allowed = os.environ.get("ORIGINS")
+if type(origins_allowed) == list:
+    origins = origins_allowed.split(',')
+else:
+    origins = origins_allowed
+
+print(origins)
 
 app = FastAPI(title="Basic FastAPI Server", version="1.0", lifespan=lifespan)
 
