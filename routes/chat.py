@@ -60,7 +60,6 @@ from bson import ObjectId
 async def getUserChats(request: Request, response: Response):
     user_id = getattr(request.state, "user_id", None)
     session_id = getattr(request.state, "session_id", None)
-    print("session id : ", session_id)
     if session_id is None:
         return {"success": True, "chats": []}
     condition = {}
@@ -126,7 +125,6 @@ async def handle_chat_response(request: Request):
         top_k=5,
         condition={"document_id": {"$in": document_ids}},
     )
-    # print(relevant_docs)
     ordered_documents = orderDocument(
         relevant_docs["metadatas"][0],
         relevant_docs["documents"][0],
