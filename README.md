@@ -1,6 +1,6 @@
-# 🤖 Z.bot — Retrieval Augmented Generation (RAG) Server
+# 🤖 Z.bot---Server — Retrieval Augmented Generation (RAG)
 
-Z.bot is a **high-performance backend system for document-aware AI conversations**, built using a Retrieval Augmented Generation (RAG) pipeline.
+Z.bot (server side) is a **high-performance backend system for document-aware AI conversations**, built using a Retrieval Augmented Generation (RAG) pipeline.
 
 It allows users to upload documents, query them intelligently, and receive **real-time streamed responses** powered by LLMs — with **context retention, minimal hallucination, and scalable architecture**.
 
