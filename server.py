@@ -41,6 +41,14 @@ async def lifespan(app: FastAPI):
     document_collection, chat_collection = instantiate_chroma()
     app.state.document_collection = document_collection
     app.state.chat_collection = chat_collection
+
+    allIds = document_collection.get()['ids']
+    if allIds and len(allIds)>0:
+        document_collection.delete(ids=allIds)
+    allIds = chat_collection.get()['ids']
+    if allIds and len(allIds)>0:
+        chat_collection.delete(ids=allIds)
+
     yield
     print("Server shutting down...")
 

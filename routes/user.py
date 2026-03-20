@@ -95,6 +95,9 @@ async def login(request: Request, response: Response):
         max_age=60 * 60 * 24 * 7,
         path="/",
     )
+    response.delete_cookie(
+        key="session_id", path="/", samesite="none", secure=True,httponly=True
+    )
 
     return response
 

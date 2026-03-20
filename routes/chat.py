@@ -60,6 +60,7 @@ from bson import ObjectId
 async def getUserChats(request: Request, response: Response):
     user_id = getattr(request.state, "user_id", None)
     session_id = getattr(request.state, "session_id", None)
+    print("session id : ", session_id)
     if session_id is None:
         return {"success": True, "chats": []}
     condition = {}
@@ -69,7 +70,7 @@ async def getUserChats(request: Request, response: Response):
         condition["user_id"] = user_id
     db = request.app.state.zensky_db
     chat_col = db["Chats"]
-    user_chats_cursor = chat_col.find(condition).sort("createdAt",-1)
+    user_chats_cursor = chat_col.find(condition).sort("createdAt", -1)
     user_chats = [serialize_chat(chat) for chat in user_chats_cursor]
     return {"success": True, "chats": user_chats}
 
@@ -82,7 +83,7 @@ def serialize_chat(chat):
 @router.get("/chat/getChatId")
 @safeExecution
 def getChatId(request: Request):
-    current_chat_id  = request.state.session.get("current_chat_id")
+    current_chat_id = request.state.session.get("current_chat_id")
     return {"success": True, "chatId": current_chat_id}
 
 
@@ -217,11 +218,7 @@ async def handle_chat_response(request: Request):
                 )
             else:
                 chat_col.update_one(
-                    {
-                        "chat_id": chat_id_using,
-                        "user_id": user_id or "no_user_id",
-                        "session_id": session_id,
-                    },
+                    {"chat_id": chat_id_using},
                     {
                         "$push": {
                             "messages": {
