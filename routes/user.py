@@ -72,9 +72,10 @@ async def login(request: Request, response: Response):
         "username": name,
         "exp": datetime.utcnow() + timedelta(days=7),
     }
-    print(os.environ["JWT_SECRET"])
     jwtToken = jwt.encode(payload, os.environ["JWT_SECRET"], algorithm="HS256")
 
+    current_chat_id = getattr(request.state,"current_chat_id",None)
+    print("current_chat_id : ",current_chat_id)
     response = JSONResponse(
         {
             "success": True,
@@ -83,6 +84,7 @@ async def login(request: Request, response: Response):
                 "name": user_info["name"],
                 "email": user_info["email"],
             },
+            "new_chat_id":current_chat_id
         }
     )
 
@@ -104,6 +106,7 @@ async def login(request: Request, response: Response):
 async def logout(request: Request, response: Response):
     session = request.state.session
     session.pop("user_id", None)
+    session.pop("current_chat_id", None)
     response.delete_cookie(
         key="zensky-jwt-token", path="/", samesite="none", secure=True,httponly=True
     )

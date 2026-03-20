@@ -67,6 +67,7 @@ async def authenticate(request: Request, call_next):
         auth_token = request.cookies.get("zensky-jwt-token")
         session_id = request.cookies.get("session_id")
         session = app.state.sessions.get(session_id)
+        print("currentSession : ",session)
         user_id = None
         # print(request.cookies)
         # print(auth_token)
@@ -82,6 +83,7 @@ async def authenticate(request: Request, call_next):
                 pass
 
         if not session:
+            print("here in session 1")
             session_id = str(uuid.uuid4())
             new_chat_id = str(uuid.uuid4())
             session = {
@@ -107,9 +109,16 @@ async def authenticate(request: Request, call_next):
                 path='/'
             )
         else:
+            print("here in session 2")
             session["request_count"] += 1
             if "user_id" not in session and user_id is not None:
                 session["user_id"] = user_id
+            if "current_chat_id" in session:
+                print("Current chat Id : ",session["current_chat_id"])
+            else:
+                print("No chat Id")
+            if "current_chat_id" not in session:
+                session["current_chat_id"] = str(uuid.uuid4())
             request.state.session_id = session_id
             request.state.user_id = user_id
             request.state.session = session
