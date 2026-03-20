@@ -7,8 +7,6 @@ pymongo
 
 PyJWT
 
-spacy
-scispacy
 contractions
 emoji
 
