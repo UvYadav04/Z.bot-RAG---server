@@ -9,6 +9,7 @@ from Qdrant.docling import (
     chunk_text_manual,
     encodeChunksManual,
 )
+from startupFunctions import get_mongo,get_qdrant
 from Qdrant.db import add_to_collection
 from fastapi import UploadFile, File, Request
 from datetime import datetime
@@ -30,7 +31,7 @@ async def getUserDocument(request: Request):
         condition["session_id"] = session_id
     else:
         condition["user_id"] = user_id
-    db = request.app.state.zensky_db
+    db = get_mongo(request.app)
     docs_col = db["Documents"]
     user_docs_cursor = docs_col.find(condition).sort("createdAt", -1)
     user_docs = [serializeDoc(doc) for doc in user_docs_cursor]
@@ -59,11 +60,11 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
     if session_id is None:
         return {"success": False, "message": "Can't upload document at the moment"}
 
-    qdrant_client = request.app.state.qdrant_client
+    qdrant_client = get_qdrant(request.app)
     if qdrant_client is None:
         return {"success": False, "message": "Can't upload document at the moment"}
 
-    db = request.app.state.zensky_db
+    db = get_mongo(request.app)
     if db is None:
         return {"success": False, "message": "Can't upload document at the moment"}
     docs_col = db["Documents"]

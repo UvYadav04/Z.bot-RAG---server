@@ -21,28 +21,35 @@ load_dotenv()
 # sessions = {}
 
 
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     from Model.load_model import get_model
+#     app.state.sessions = {}
+#     # model, tokenizer = get_model()
+#     # app.state.model = model
+#     # app.state.tokenizer = tokenizer
+#     # client = get_model()
+#     # app.state.client = client
+
+#     # client = connect_db()
+#     # if client is not None:
+#     #     app.state.mongo_client = client
+#         # app.state.zensky_db = client["ZenskyDatabase"]
+
+#     # from Qdrant.db import instantiate_chroma
+
+#     # qdrant_client = instantiate_chroma()
+#     # app.state.qdrant_client = qdrant_client
+
+
+#     yield
+#     print("Server shutting down...")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from Model.load_model import get_model
     app.state.sessions = {}
-    # model, tokenizer = get_model()
-    # app.state.model = model
-    # app.state.tokenizer = tokenizer
-    client = get_model()
-    app.state.client = client
-
-    client = connect_db()
-    if client is not None:
-        app.state.mongo_client = client
-        app.state.zensky_db = client["ZenskyDatabase"]
-
-    from Qdrant.db import instantiate_chroma
-
-    qdrant_client = instantiate_chroma()
-    app.state.qdrant_client = qdrant_client
-
     yield
     print("Server shutting down...")
+
 
 origins_allowed = os.environ.get("ORIGINS")
 if type(origins_allowed) == list:

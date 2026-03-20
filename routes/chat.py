@@ -7,6 +7,7 @@ import time
 import uuid
 from utils.orderDocs import orderDocument, orderChats,sort_docs,sort_chats
 from fastapi.responses import StreamingResponse, Response
+from startupFunctions import get_model_client,get_mongo,get_qdrant
 
 # from server import llm_model,llm
 from Model.model import (
@@ -62,7 +63,7 @@ async def getUserChats(request: Request, response: Response):
         condition["session_id"] = session_id
     else:
         condition["user_id"] = user_id
-    db = request.app.state.zensky_db
+    db = get_mongo(request.app)
     chat_col = db["Chats"]
     user_chats_cursor = chat_col.find(condition).sort("createdAt", -1)
     user_chats = [serialize_chat(chat) for chat in user_chats_cursor]
@@ -99,7 +100,7 @@ async def handle_chat_response(request: Request):
     user_id = getattr(request.state, "user_id", None)
     body = await request.json()
 
-    db = request.app.state.zensky_db
+    db = get_mongo(request.app)
     chat_col = db["Chats"]
 
     query = body["query"]
@@ -114,7 +115,7 @@ async def handle_chat_response(request: Request):
     embeddings = encodeChunksManual([query])
     # print(embeddings)
 
-    qdrant_client = request.app.state.qdrant_client
+    qdrant_client = get_qdrant(request.app)
     relevant_docs = query_qdrant_db(
         qdrant_client=qdrant_client,
         collection_name="document_collection",
@@ -128,7 +129,6 @@ async def handle_chat_response(request: Request):
     # )
     ordered_documents = sort_docs(relevant_docs)
     print(chat_id_using)
-    qdrant_client = request.app.state.qdrant_client
     condition = {}
     condition["chat_id"] = chat_id_using or ""
     if session_id:
@@ -158,7 +158,7 @@ async def handle_chat_response(request: Request):
     if chat_id_using is not None:
         chat_document = chat_col.find_one({"chat_id": chat_id_using})
 
-    client = request.app.state.client
+    client = get_model_client(request.app)
     if client is None:
         return {"success": False, "message": "Failed to respond to query."}
     content = "\n\n".join(ordered_documents + ordered_chats)

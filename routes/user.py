@@ -8,6 +8,7 @@ from bson import ObjectId
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
+from startupFunctions import get_mongo
 
 load_dotenv()
 
@@ -21,7 +22,7 @@ async def getUserInfo(request: Request, response: Response):
     user_id = getattr(request.state, "user_id", None)
 
     if hasattr(request.app.state, "zensky_db"):
-        db = request.app.state.zensky_db
+        db = get_mongo(request.app)
         user_col = db["Users"]
     else:
         return {"success": False, "message": "cant get user Info at the moment"}
@@ -50,7 +51,7 @@ async def login(request: Request, response: Response):
     email = body["email"]
     name = body["name"]
     if hasattr(request.app.state, "zensky_db"):
-        db = request.app.state.zensky_db
+        db = get_mongo(request.app)
         user_col = db["Users"]
     else:
         return {"success": False, "message": "cant login at the moment"}
@@ -73,7 +74,7 @@ async def login(request: Request, response: Response):
     }
     jwtToken = jwt.encode(payload, os.environ["JWT_SECRET"], algorithm="HS256")
 
-    current_chat_id = getattr(request.state,"current_chat_id",None)
+    current_chat_id = getattr(request.state, "current_chat_id", None)
     response = JSONResponse(
         {
             "success": True,
@@ -82,7 +83,7 @@ async def login(request: Request, response: Response):
                 "name": user_info["name"],
                 "email": user_info["email"],
             },
-            "new_chat_id":current_chat_id
+            "new_chat_id": current_chat_id,
         }
     )
 
@@ -96,7 +97,7 @@ async def login(request: Request, response: Response):
         path="/",
     )
     response.delete_cookie(
-        key="session_id", path="/", samesite="none", secure=True,httponly=True
+        key="session_id", path="/", samesite="none", secure=True, httponly=True
     )
 
     return response
@@ -106,9 +107,9 @@ async def login(request: Request, response: Response):
 @safeExecution
 async def logout(request: Request, response: Response):
     response.delete_cookie(
-        key="zensky-jwt-token", path="/", samesite="none", secure=True,httponly=True
+        key="zensky-jwt-token", path="/", samesite="none", secure=True, httponly=True
     )
     response.delete_cookie(
-        key="session_id", path="/", samesite="none", secure=True,httponly=True
+        key="session_id", path="/", samesite="none", secure=True, httponly=True
     )
     return {"success": True}
