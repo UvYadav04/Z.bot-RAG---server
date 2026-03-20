@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
     yield
     print("Server shutting down...")
 
-origins = ["http://localhost:5173"]
+origins = ["http://localhost:517"]
 
 app = FastAPI(title="Basic FastAPI Server", version="1.0", lifespan=lifespan)
 
