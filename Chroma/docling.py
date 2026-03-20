@@ -44,19 +44,6 @@ def chunk_text_manual(path, chunk_size=500, overlap=100):
     chunks = chunker.strategic_header_chunking(
         pdf_path=path, target_words_per_chunk=chunk_size
     )
-
-    # print(f"✅ Created {len(chunks)} structured chunks")
-    # print(
-    #     f"📊 Average chunk size: {sum(c.get('word_count', 0) for c in chunks) // len(chunks)} words"
-    # )
-
-    # Access chunk data
-    # for index,chunk in enumerate(chunks):
-    #     if index>0:
-    #         break
-        # print(f"📖 {chunk['topic']} ({chunk['word_count']} words)")
-        # print(f"📋 {chunk['summary']}")
-        # print(chunk)
     return chunks
 
 

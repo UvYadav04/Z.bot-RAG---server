@@ -5,7 +5,6 @@ import time
 @safeExecution
 def generate_response(inputs, model, tokenizer,max_tokens, temperature=0.7):
     start = time.time()
-    print("Called at : ",start)
     streamer = TextIteratorStreamer(tokenizer, skip_prompt=True,skip_special_tokens=True)
     generation_kwargs = dict(
         **inputs,
@@ -68,7 +67,6 @@ def tokens_to_text(tokens, Tokenizer):
 
 
 """
-    # print(chat_id)
     # message = format_user_query(query, ordered_documents, ordered_chats)
 
     # inputs = format_messages(message, tokenizer)

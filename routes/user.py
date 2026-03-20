@@ -19,7 +19,6 @@ router = APIRouter()
 async def getUserInfo(request: Request, response: Response):
 
     user_id = getattr(request.state, "user_id", None)
-    print(user_id)
 
     if hasattr(request.app.state, "zensky_db"):
         db = request.app.state.zensky_db
@@ -75,7 +74,6 @@ async def login(request: Request, response: Response):
     jwtToken = jwt.encode(payload, os.environ["JWT_SECRET"], algorithm="HS256")
 
     current_chat_id = getattr(request.state,"current_chat_id",None)
-    print("current_chat_id : ",current_chat_id)
     response = JSONResponse(
         {
             "success": True,
@@ -104,10 +102,10 @@ async def login(request: Request, response: Response):
 @router.post("/user/logout")
 @safeExecution
 async def logout(request: Request, response: Response):
-    session = request.state.session
-    session.pop("user_id", None)
-    session.pop("current_chat_id", None)
     response.delete_cookie(
         key="zensky-jwt-token", path="/", samesite="none", secure=True,httponly=True
+    )
+    response.delete_cookie(
+        key="session_id", path="/", samesite="none", secure=True,httponly=True
     )
     return {"success": True}

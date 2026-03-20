@@ -69,7 +69,7 @@ async def getUserChats(request: Request, response: Response):
         condition["user_id"] = user_id
     db = request.app.state.zensky_db
     chat_col = db["Chats"]
-    user_chats_cursor = chat_col.find(condition)
+    user_chats_cursor = chat_col.find(condition).sort("createdAt",-1)
     user_chats = [serialize_chat(chat) for chat in user_chats_cursor]
     return {"success": True, "chats": user_chats}
 
@@ -83,9 +83,7 @@ def serialize_chat(chat):
 @safeExecution
 def getChatId(request: Request):
     current_chat_id  = request.state.session.get("current_chat_id")
-    print("current Chat Id : ",current_chat_id)
     return {"success": True, "chatId": current_chat_id}
-
 
 
 @router.post("/chat/setChatId")
@@ -94,9 +92,7 @@ async def setChatId(request: Request):
     sessions = request.app.state.sessions
     body = await request.json()
     clientChatId = body["chatId"]
-    print("client chat id", clientChatId)
     session_id = getattr(request.state, "session_id", None)
-    print(session_id)
     if session_id and clientChatId:
         sessions[session_id]["current_chat_id"] = clientChatId
     return {"success": True}
@@ -106,7 +102,6 @@ async def setChatId(request: Request):
 @safeExecution
 async def handle_chat_response(request: Request):
     user_id = getattr(request.state, "user_id", None)
-    print("userid : ", user_id)
     body = await request.json()
 
     db = request.app.state.zensky_db
@@ -115,9 +110,7 @@ async def handle_chat_response(request: Request):
     query = body["query"]
     selected_chat_id = body["selected_chat_id"]
     chat_id = request.state.session.get("current_chat_id")
-    print("selected_chat : ", selected_chat_id)
     chat_id_using = selected_chat_id or chat_id
-    print("chat_id_using : ", chat_id_using)
     document_ids = body["document_ids"] if "document_ids" in body else []
     query = queryPreprocessing(query)
 
@@ -132,6 +125,7 @@ async def handle_chat_response(request: Request):
         top_k=5,
         condition={"document_id": {"$in": document_ids}},
     )
+    # print(relevant_docs)
     ordered_documents = orderDocument(
         relevant_docs["metadatas"][0],
         relevant_docs["documents"][0],
@@ -218,6 +212,7 @@ async def handle_chat_response(request: Request):
                         "user_id": user_id or "no_user_id",
                         "session_id": session_id,
                         "name": query,
+                        "createdAt": datetime.utcnow(),
                     }
                 )
             else:

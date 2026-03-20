@@ -23,17 +23,14 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Starting server...")
     from Model.load_model import get_model
     app.state.sessions = {}
-    print("Loading model...")
     # model, tokenizer = get_model()
     # app.state.model = model
     # app.state.tokenizer = tokenizer
     client = get_model()
     app.state.client = client
 
-    print("Connecting Mongo DB")
     client = connect_db()
     if client is not None:
         app.state.mongo_client = client
@@ -67,23 +64,16 @@ async def authenticate(request: Request, call_next):
         auth_token = request.cookies.get("zensky-jwt-token")
         session_id = request.cookies.get("session_id")
         session = app.state.sessions.get(session_id)
-        print("currentSession : ",session)
         user_id = None
-        # print(request.cookies)
-        # print(auth_token)
-        # print(session_id)
         if auth_token:
             try:
                 payload = jwt.decode(auth_token, os.environ["JWT_SECRET"],algorithms=["HS256"])
-                # print(payload)
                 user_id = payload.get("user_id")
-                # print(user_id)
             except jwt.InvalidTokenError as e:
                 print(e)
                 pass
 
         if not session:
-            print("here in session 1")
             session_id = str(uuid.uuid4())
             new_chat_id = str(uuid.uuid4())
             session = {
@@ -97,7 +87,6 @@ async def authenticate(request: Request, call_next):
             request.state.session_id = session_id
             request.state.session = session
             request.state.user_id = user_id
-            # print(request.state.user_id)
             response = await call_next(request)
             response.set_cookie(
                 key="session_id",
@@ -109,14 +98,9 @@ async def authenticate(request: Request, call_next):
                 path='/'
             )
         else:
-            print("here in session 2")
             session["request_count"] += 1
             if "user_id" not in session and user_id is not None:
                 session["user_id"] = user_id
-            if "current_chat_id" in session:
-                print("Current chat Id : ",session["current_chat_id"])
-            else:
-                print("No chat Id")
             if "current_chat_id" not in session:
                 session["current_chat_id"] = str(uuid.uuid4())
             request.state.session_id = session_id

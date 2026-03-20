@@ -28,8 +28,6 @@ router = APIRouter()
 async def getUserDocument(request: Request):
     user_id = getattr(request.state, "user_id", None)
     session_id = getattr(request.state,"session_id",None)
-    print("userId",user_id)
-    print("sessionId",session_id)
     if user_id and session_id is None:
         return {"success": False, "message": "please login to get the document"}
     condition = {}
@@ -37,13 +35,10 @@ async def getUserDocument(request: Request):
         condition["session_id"] = session_id
     else:
         condition["user_id"] = user_id
-    print(condition)
     db = request.app.state.zensky_db
     docs_col = db["Documents"]
-    user_docs_cursor = docs_col.find(condition)
-    print(user_docs_cursor)
+    user_docs_cursor = docs_col.find(condition).sort("createdAt", -1)
     user_docs = [serializeDoc(doc) for doc in user_docs_cursor ]
-    print(user_docs)
     return {"success": True, "documents": user_docs}
 
 def serializeDoc(doc):
@@ -53,11 +48,7 @@ def serializeDoc(doc):
 @router.post("/document/upload_document")
 @safeExecution
 async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...)):
-    # print(request.state)
     user_id = getattr(request.state, "user_id", None)
-    # print(user_id)
-    # if user_id is None:
-    #     return {"success": False, "message": "Please login to upload a document"}
 
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
@@ -68,7 +59,6 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
             shutil.copyfileobj(file.file, buffer)
 
     session_id = getattr(request.state, "session_id", None)
-    # print(session_id)
     if session_id is None:
         return {"success": False, "message": "Can't upload document at the moment"}
 
@@ -89,7 +79,8 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
             "name": path.split("/")[1],
             "uploadedOn": datetime.now(),
             "user_id": user_id or "no_user_id",
-            "session_id":session_id 
+            "session_id": session_id,
+            "createdAt": datetime.utcnow(),
         }
         new_doc = docs_col.insert_one(new_doc_info)
         user_docs.append({"id":str(new_doc.inserted_id)})
@@ -122,7 +113,5 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
                 metadata=metadatas,
             )
         os.remove(path)
-
-
 
     return {"success": True,"documents":user_docs }
