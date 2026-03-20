@@ -80,7 +80,7 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
             "createdAt": datetime.utcnow(),
         }
         new_doc = docs_col.insert_one(new_doc_info)
-        user_docs.append({"id": str(new_doc.inserted_id)})
+        user_docs.append({"_id": str(new_doc.inserted_id)})
         chunks = chunk_text_manual(path, 500)
         if chunks is not None:
             chunks = chunks[0]

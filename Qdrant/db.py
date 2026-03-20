@@ -8,7 +8,7 @@ from qdrant_client.models import (
     MatchAny,
 )
 from dotenv import load_dotenv
-
+import uuid
 load_dotenv()
 import os
 
@@ -21,6 +21,31 @@ def instantiate_chroma():
         url=os.environ.get("QDRANT_URL"),
         api_key=os.environ.get("QDRANT_API_KEY"),
     )
+    # user_id → keyword
+    # my_qdrant_client.create_payload_index(
+    #     collection_name="chat_collection",
+    #     field_name="user_id",
+    #     field_schema="keyword"
+    # )
+
+    # chat_id → uuid
+    # my_qdrant_client.create_payload_index(
+    #     collection_name="chat_collection",
+    #     field_name="chat_id",
+    #     field_schema="uuid"
+    # )
+
+    # session_id → uuid
+    # my_qdrant_client.create_payload_index(
+    #     collection_name="chat_collection",
+    #     field_name="session_id",
+    #     field_schema="uuid"
+    # )
+    # my_qdrant_client.create_payload_index(
+    # collection_name="document_collection",
+    # field_name="document_id",
+    # field_schema="keyword"
+    # )
     # my_qdrant_client.recreate_collection(
     #     collection_name="document_collection",
     #     vectors_config=VectorParams(size=384, distance=Distance.COSINE),
@@ -40,7 +65,7 @@ def add_to_collection(ids, qdrant_client, collection_name, embeddings, metadata)
     try:
         points = [
             {
-                "id": i,
+                "id": uuid.uuid4(),
                 "vector": embeddings[i],
                 "payload": metadata[i],
             }
@@ -70,19 +95,7 @@ def query_qdrant_db(
         limit=top_k,
         query_filter=qdrant_filter,
     )
-
-    formatted_results = [
-        {
-            "id": point.id,
-            "score": point.score,
-            "text": point.payload.get("text"),
-            "metadata": point.payload,
-        }
-        for point in results
-    ]
-    print(formatted_results)
-
-    return formatted_results
+    return results.points
 
 
 def build_filter(condition):
@@ -93,13 +106,11 @@ def build_filter(condition):
 
     for key, value in condition.items():
 
-        # 🔥 Handle $in
         if isinstance(value, dict) and "$in" in value:
             must_conditions.append(
                 FieldCondition(key=key, match=MatchAny(any=value["$in"]))
             )
 
-        # ✅ Normal equality
         else:
             must_conditions.append(
                 FieldCondition(key=key, match=MatchValue(value=value))

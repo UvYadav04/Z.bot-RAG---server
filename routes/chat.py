@@ -5,7 +5,7 @@ import torch
 import pymupdf
 import time
 import uuid
-from utils.orderDocs import orderDocument, orderChats
+from utils.orderDocs import orderDocument, orderChats,sort_docs,sort_chats
 from fastapi.responses import StreamingResponse, Response
 
 # from server import llm_model,llm
@@ -112,20 +112,22 @@ async def handle_chat_response(request: Request):
     creativity = body["creativity"] or "medium"
     session_id = getattr(request.state, "session_id", None)
     embeddings = encodeChunksManual([query])
+    # print(embeddings)
 
     qdrant_client = request.app.state.qdrant_client
     relevant_docs = query_qdrant_db(
         qdrant_client=qdrant_client,
-        collection_name="chat_collection",
-        query_vector=embeddings,
+        collection_name="document_collection",
+        query_vector=embeddings[0],
         top_k=5,
         condition={"document_id": {"$in": document_ids}},
     )
-    ordered_documents = orderDocument(
-        relevant_docs["metadatas"][0],
-        relevant_docs["documents"][0],
-    )
-
+    # ordered_documents = orderDocument(
+    #     relevant_docs,
+    #     relevant_docs["documents"][0],
+    # )
+    ordered_documents = sort_docs(relevant_docs)
+    print(chat_id_using)
     qdrant_client = request.app.state.qdrant_client
     condition = {}
     condition["chat_id"] = chat_id_using or ""
@@ -137,19 +139,20 @@ async def handle_chat_response(request: Request):
     relevant_chats = query_qdrant_db(
         qdrant_client=qdrant_client,
         collection_name="chat_collection",
-        query_vector=embeddings,
+        query_vector=embeddings[0],
         top_k=5,
         condition=condition,
     )
-    ids = relevant_chats["ids"]
-    ordered_chats = (
-        orderChats(
-            relevant_chats["metadatas"][0],
-            relevant_chats["documents"][0],
-        )
-        if len(ids) > 0
-        else []
-    )
+    # ids = relevant_chats["ids"]
+    # ordered_chats = (
+    #     orderChats(
+    #         relevant_chats["metadatas"][0],
+    #         relevant_chats["documents"][0],
+    #     )
+    #     if len(ids) > 0
+    #     else []
+    # )
+    ordered_chats = sort_chats(relevant_chats)
     chat_document = None
 
     if chat_id_using is not None:
@@ -229,6 +232,7 @@ async def handle_chat_response(request: Request):
             add_to_collection(
                 ids=[str(timestamp)],
                 qdrant_client=qdrant_client,
+                collection_name="chat_collection",
                 embeddings=chat_embeddings,
                 metadata=[
                     {
@@ -236,7 +240,7 @@ async def handle_chat_response(request: Request):
                         "timestamp": str(timestamp),
                         "user_id": user_id or "no_user_id",
                         "chat_id": chat_id_using,
-                        "chunks": [final_response],
+                        "text": final_response,
                     }
                 ],
             )
