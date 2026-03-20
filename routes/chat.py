@@ -24,19 +24,14 @@ import os
 from datetime import datetime
 from utils.queryProcessing import queryPreprocessing
 
-from Chroma.docling import (
+from Qdrant.docling import (
     parse_doc,
     chunkDocs,
     encodeChunks,
     chunk_text_manual,
     encodeChunksManual,
 )
-from Chroma.db import (
-    add_to_document_collection,
-    query_document_collection,
-    query_chat_collection,
-    add_to_chat_collection,
-)
+from Qdrant.db import add_to_collection, query_qdrant_db
 
 router = APIRouter()
 
@@ -118,10 +113,11 @@ async def handle_chat_response(request: Request):
     session_id = getattr(request.state, "session_id", None)
     embeddings = encodeChunksManual([query])
 
-    document_collection = request.app.state.document_collection
-    relevant_docs = query_document_collection(
-        document_collection=document_collection,
-        query_embedding=embeddings,
+    qdrant_client = request.app.state.qdrant_client
+    relevant_docs = query_qdrant_db(
+        qdrant_client=qdrant_client,
+        collection_name="chat_collection",
+        query_vector=embeddings,
         top_k=5,
         condition={"document_id": {"$in": document_ids}},
     )
@@ -130,7 +126,7 @@ async def handle_chat_response(request: Request):
         relevant_docs["documents"][0],
     )
 
-    chat_collection = request.app.state.chat_collection
+    qdrant_client = request.app.state.qdrant_client
     condition = {}
     condition["chat_id"] = chat_id_using or ""
     if session_id:
@@ -138,9 +134,10 @@ async def handle_chat_response(request: Request):
     if user_id:
         condition["user_id"] = user_id
 
-    relevant_chats = query_chat_collection(
-        chat_collection=chat_collection,
-        query_embedding=embeddings,
+    relevant_chats = query_qdrant_db(
+        qdrant_client=qdrant_client,
+        collection_name="chat_collection",
+        query_vector=embeddings,
         top_k=5,
         condition=condition,
     )
@@ -196,7 +193,7 @@ async def handle_chat_response(request: Request):
                     response_tokens += content
                     yield content
 
-            final_response = response_tokens
+            final_response = query + response_tokens
             timestamp = datetime.now()
 
             if chat_document is None:
@@ -229,17 +226,17 @@ async def handle_chat_response(request: Request):
                     },
                 )
             chat_embeddings = encodeChunksManual([final_response])
-            add_to_chat_collection(
+            add_to_collection(
                 ids=[str(timestamp)],
-                chat_collection=chat_collection,
+                qdrant_client=qdrant_client,
                 embeddings=chat_embeddings,
-                chunks=[final_response],
                 metadata=[
                     {
                         "session_id": session_id,
                         "timestamp": str(timestamp),
                         "user_id": user_id or "no_user_id",
                         "chat_id": chat_id_using,
+                        "chunks": [final_response],
                     }
                 ],
             )

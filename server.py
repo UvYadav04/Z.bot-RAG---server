@@ -36,11 +36,10 @@ async def lifespan(app: FastAPI):
         app.state.mongo_client = client
         app.state.zensky_db = client["ZenskyDatabase"]
 
-    from Chroma.db import instantiate_chroma
+    from Qdrant.db import instantiate_chroma
 
-    document_collection, chat_collection = instantiate_chroma()
-    app.state.document_collection = document_collection
-    app.state.chat_collection = chat_collection
+    qdrant_client = instantiate_chroma()
+    app.state.qdrant_client = qdrant_client
 
 
     yield

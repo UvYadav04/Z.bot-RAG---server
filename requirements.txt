@@ -26,3 +26,4 @@ chromadb
 pymupdf
 
 docling
+qdrant_client

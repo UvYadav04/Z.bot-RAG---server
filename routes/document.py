@@ -2,19 +2,14 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from utils.safeExecution import safeExecution
 from typing import List
-from Chroma.docling import (
+from Qdrant.docling import (
     parse_doc,
     chunkDocs,
     encodeChunks,
     chunk_text_manual,
     encodeChunksManual,
 )
-from Chroma.db import (
-    add_to_document_collection,
-    query_document_collection,
-    query_chat_collection,
-    add_to_chat_collection,
-)
+from Qdrant.db import add_to_collection
 from fastapi import UploadFile, File, Request
 from datetime import datetime
 import shutil
@@ -27,7 +22,7 @@ router = APIRouter()
 @safeExecution
 async def getUserDocument(request: Request):
     user_id = getattr(request.state, "user_id", None)
-    session_id = getattr(request.state,"session_id",None)
+    session_id = getattr(request.state, "session_id", None)
     if user_id and session_id is None:
         return {"success": False, "message": "please login to get the document"}
     condition = {}
@@ -38,12 +33,14 @@ async def getUserDocument(request: Request):
     db = request.app.state.zensky_db
     docs_col = db["Documents"]
     user_docs_cursor = docs_col.find(condition).sort("createdAt", -1)
-    user_docs = [serializeDoc(doc) for doc in user_docs_cursor ]
+    user_docs = [serializeDoc(doc) for doc in user_docs_cursor]
     return {"success": True, "documents": user_docs}
+
 
 def serializeDoc(doc):
     doc["_id"] = str(doc["_id"])
     return doc
+
 
 @router.post("/document/upload_document")
 @safeExecution
@@ -62,8 +59,8 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
     if session_id is None:
         return {"success": False, "message": "Can't upload document at the moment"}
 
-    document_collection = request.app.state.document_collection
-    if document_collection is None:
+    qdrant_client = request.app.state.qdrant_client
+    if qdrant_client is None:
         return {"success": False, "message": "Can't upload document at the moment"}
 
     db = request.app.state.zensky_db
@@ -83,7 +80,7 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
             "createdAt": datetime.utcnow(),
         }
         new_doc = docs_col.insert_one(new_doc_info)
-        user_docs.append({"id":str(new_doc.inserted_id)})
+        user_docs.append({"id": str(new_doc.inserted_id)})
         chunks = chunk_text_manual(path, 500)
         if chunks is not None:
             chunks = chunks[0]
@@ -93,25 +90,26 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
                 continue
             metadatas = [
                 {
+                    "tenant_id": user_id or "no_user_id",  
                     "session_id": session_id,
                     "document_id": str(new_doc.inserted_id),
-                    "index": chunk["chunk_id"],
+                    "chunk_index": chunk["chunk_id"],
                     "topic": chunk["topic"],
                     "words": chunk["word_count"],
                     "page": chunk["page"],
                     "summary": chunk["summary"],
-                    "user_id": user_id or "no_user_id",
                     "pdf_name": path.split("/")[1],
+                    "text": chunk["content"],  
                 }
                 for chunk in chunks
             ]
-            add_to_document_collection(
-                document_collection=document_collection,
+            add_to_collection(
+                qdrant_client=qdrant_client,
                 ids=[f"chunk={chunk['chunk_id']}" for chunk in chunks],
+                collection_name="document_collection",
                 embeddings=embeddings,
-                chunks=contents,
                 metadata=metadatas,
             )
         os.remove(path)
 
-    return {"success": True,"documents":user_docs }
+    return {"success": True, "documents": user_docs}
