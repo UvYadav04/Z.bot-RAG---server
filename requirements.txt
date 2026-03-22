@@ -13,6 +13,5 @@ emoji
 
 openai
 
-docling
 qdrant_client
 mangum
