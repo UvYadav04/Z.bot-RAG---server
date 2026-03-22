@@ -114,7 +114,7 @@ async def handle_chat_response(request: Request):
         qdrant_client=qdrant_client,
         collection_name="document_collection",
         query_vector=embeddings[0],
-        top_k=5,
+        top_k=3,
         condition={"document_id": {"$in": document_ids}},
     )
     # ordered_documents = orderDocument(
@@ -134,7 +134,7 @@ async def handle_chat_response(request: Request):
         qdrant_client=qdrant_client,
         collection_name="chat_collection",
         query_vector=embeddings[0],
-        top_k=5,
+        top_k=3,
         condition=condition,
     )
     # ids = relevant_chats["ids"]

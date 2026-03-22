@@ -29,7 +29,7 @@ from pdf_chunker_for_rag.chunk_creator import CleanHybridPDFChunker
 # Initialize the production chunker
 chunker = CleanHybridPDFChunker()
 
-def chunk_text_manual(path, chunk_size=500, overlap=100):
+def chunk_text_manual(path, chunk_size=200, overlap=100):
     # Process PDF with strategic header chunking
     chunks = chunker.strategic_header_chunking(
         pdf_path=path, target_words_per_chunk=chunk_size

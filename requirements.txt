@@ -19,3 +19,6 @@ mangum
 pymupdf
 pypdf
 fastembed
+pdf-chunker-for-rag
+python-multipart
+itsdangerous

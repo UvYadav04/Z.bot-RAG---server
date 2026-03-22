@@ -1,4 +1,4 @@
-import chromadb
+# import chromadb
 from utils.safeExecution import safeExecution
 from qdrant_client import QdrantClient
 from qdrant_client.models import (

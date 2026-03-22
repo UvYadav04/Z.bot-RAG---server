@@ -146,3 +146,4 @@ chroma_db/
 uploads/
 lib
 *.zip
+venv/
