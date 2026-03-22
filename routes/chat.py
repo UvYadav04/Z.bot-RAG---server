@@ -31,36 +31,57 @@ from Qdrant.db import add_to_collection, query_qdrant_db
 router = APIRouter()
 
 
+
+import logging
+
+logger = logging.getLogger("chat_routes")
+logging.basicConfig(level=logging.INFO)
+
 @router.get("/chat/newChat")
 @safeExecution
 def create_new_chat(request: Request):
     new_chat_id = uuid.uuid4()
     sessions = request.app.state.sessions
     session_id = getattr(request.state, "session_id", None)
+
+    logger.info(f"Creating new chat | session_id={session_id} | chat_id={new_chat_id}")
+
     if session_id:
         sessions[session_id]["current_chat_id"] = new_chat_id
+    else:
+        logger.warning("Session ID missing while creating chat")
+
     return {"success": True, "chatId": new_chat_id}
-
-
-from bson import ObjectId
-
 
 @router.get("/chat/getChats")
 @safeExecution
 async def getUserChats(request: Request, response: Response):
     user_id = getattr(request.state, "user_id", None)
     session_id = getattr(request.state, "session_id", None)
+
+    logger.info(f"Fetching chats | user_id={user_id} | session_id={session_id}")
+
     if session_id is None:
+        logger.warning("No session_id, returning empty chats")
         return {"success": True, "chats": []}
+
     condition = {}
     if user_id is None:
         condition["session_id"] = session_id
     else:
         condition["user_id"] = user_id
+
     db = get_mongo(request.app)
+    if db is None:
+        logger.error("MongoDB not available")
+        return {"success": False, "message": "DB error"}
+
     chat_col = db["Chats"]
     user_chats_cursor = chat_col.find(condition).sort("createdAt", -1)
     user_chats = [serialize_chat(chat) for chat in user_chats_cursor]
+
+    logger.info(f"Fetched {len(user_chats)} chats")
+
     return {"success": True, "chats": user_chats}
 
 
@@ -81,35 +102,51 @@ def getChatId(request: Request):
 async def setChatId(request: Request):
     sessions = request.app.state.sessions
     body = await request.json()
+
     clientChatId = body["chatId"]
     session_id = getattr(request.state, "session_id", None)
+
+    logger.info(f"Setting chat_id | session_id={session_id} | chat_id={clientChatId}")
+
     if session_id and clientChatId:
         sessions[session_id]["current_chat_id"] = clientChatId
-    return {"success": True}
+    else:
+        logger.warning("Failed to set chat_id (missing session or chatId)")
 
+    return {"success": True}
 
 @router.post("/chat/query")
 @safeExecution
 async def handle_chat_response(request: Request):
     user_id = getattr(request.state, "user_id", None)
-    body = await request.json()
+    session_id = getattr(request.state, "session_id", None)
 
-    db = get_mongo(request.app)
-    chat_col = db["Chats"]
+    body = await request.json()
 
     query = body["query"]
     selected_chat_id = body["selected_chat_id"]
     chat_id = request.state.session.get("current_chat_id")
+
     chat_id_using = selected_chat_id or chat_id
-    document_ids = body["document_ids"] if "document_ids" in body else []
+
+    logger.info(f"Incoming query | session_id={session_id} | user_id={user_id}")
+    logger.info(f"Chat selection | selected={selected_chat_id} | session_chat={chat_id} | using={chat_id_using}")
+
+    document_ids = body.get("document_ids", [])
     query = queryPreprocessing(query)
 
-    creativity = body["creativity"] or "medium"
-    session_id = getattr(request.state, "session_id", None)
+    db = get_mongo(request.app)
+    chat_col = db["Chats"]
+
     embeddings = encodeChunksManual([query])
-    # print(embeddings)
+    if not embeddings:
+        logger.error("Failed to generate query embeddings")
+        return {"success": False, "message": "Embedding failed"}
 
     qdrant_client = get_qdrant(request.app)
+
+    logger.info(f"Querying Qdrant documents | doc_ids={document_ids}")
+
     relevant_docs = query_qdrant_db(
         qdrant_client=qdrant_client,
         collection_name="document_collection",
@@ -117,18 +154,17 @@ async def handle_chat_response(request: Request):
         top_k=3,
         condition={"document_id": {"$in": document_ids}},
     )
-    # ordered_documents = orderDocument(
-    #     relevant_docs,
-    #     relevant_docs["documents"][0],
-    # )
+
     ordered_documents = sort_docs(relevant_docs)
-    print(chat_id_using)
-    condition = {}
-    condition["chat_id"] = chat_id_using or ""
+
+    condition = {"chat_id": chat_id_using or ""}
+
     if session_id:
         condition["session_id"] = session_id
     if user_id:
         condition["user_id"] = user_id
+
+    logger.info(f"Querying Qdrant chats | condition={condition}")
 
     relevant_chats = query_qdrant_db(
         qdrant_client=qdrant_client,
@@ -137,41 +173,27 @@ async def handle_chat_response(request: Request):
         top_k=3,
         condition=condition,
     )
-    # ids = relevant_chats["ids"]
-    # ordered_chats = (
-    #     orderChats(
-    #         relevant_chats["metadatas"][0],
-    #         relevant_chats["documents"][0],
-    #     )
-    #     if len(ids) > 0
-    #     else []
-    # )
-    ordered_chats = sort_chats(relevant_chats)
-    chat_document = None
 
-    if chat_id_using is not None:
+    ordered_chats = sort_chats(relevant_chats)
+
+    chat_document = None
+    if chat_id_using:
         chat_document = chat_col.find_one({"chat_id": chat_id_using})
+
+    logger.info(f"Chat document exists: {chat_document is not None}")
 
     client = get_model_client(request.app)
     if client is None:
-        return {"success": False, "message": "Failed to respond to query."}
+        logger.error("Model client not available")
+        return {"success": False, "message": "LLM error"}
+
     content = "\n\n".join(ordered_documents + ordered_chats)
 
-    system_prompt = f"""
-    You are a helpful assistant.
-
-    Answer the user ONLY using the provided context.
-    If the answer is not in the context, try to fulfill user's query using your pretrained knowledge but keep the context maintain, and softly deny the query if you have no answer.
-
-    <context>
-    {content}
-    </context>
-    """
-
     messages = [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": f"<context>{content}</context>"},
         {"role": "user", "content": query},
     ]
+
     stream = client.chat.completions.create(
         model="openai/gpt-oss-20b",
         messages=messages,
@@ -193,10 +215,13 @@ async def handle_chat_response(request: Request):
             final_response = query + response_tokens
             timestamp = datetime.now()
 
+            logger.info(f"Saving chat response | chat_id={chat_id_using}")
+
             if chat_document is None:
+                logger.info("Creating new chat document")
+
                 chat_col.insert_one(
                     {
-                        "createdAt": timestamp,
                         "chat_id": chat_id_using,
                         "messages": [
                             {"role": "user", "content": query},
@@ -209,6 +234,8 @@ async def handle_chat_response(request: Request):
                     }
                 )
             else:
+                logger.info("Updating existing chat document")
+
                 chat_col.update_one(
                     {"chat_id": chat_id_using},
                     {
@@ -222,25 +249,26 @@ async def handle_chat_response(request: Request):
                         }
                     },
                 )
+
             chat_embeddings = encodeChunksManual([final_response])
+
+            logger.info("Saving chat embeddings to Qdrant")
+
             add_to_collection(
                 ids=[str(timestamp)],
                 qdrant_client=qdrant_client,
                 collection_name="chat_collection",
                 embeddings=chat_embeddings,
-                metadata=[
-                    {
-                        "session_id": session_id,
-                        "timestamp": str(timestamp),
-                        "user_id": user_id or "no_user_id",
-                        "chat_id": chat_id_using,
-                        "text": final_response,
-                    }
-                ],
+                metadata=[{
+                    "session_id": session_id,
+                    "user_id": user_id or "no_user_id",
+                    "chat_id": chat_id_using,
+                    "text": final_response,
+                }],
             )
 
         except Exception as e:
+            logger.exception(f"Streaming error: {str(e)}")
             yield "Error generating response"
 
     return StreamingResponse(token_generator(), media_type="text/plain")
-    # return {"success": True, "chat_id": chat_id}
