@@ -6,7 +6,7 @@ from Qdrant.docling import (
     chunk_text_manual,
     encodeChunksManual,
 )
-from startupFunctions import get_mongo,get_qdrant
+from startupFunctions import get_mongo,get_qdrant,get_model_client
 from Qdrant.db import add_to_collection
 from fastapi import UploadFile, File, Request
 from datetime import datetime
@@ -60,7 +60,7 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
     qdrant_client = get_qdrant(request.app)
     if qdrant_client is None:
         return {"success": False, "message": "Can't upload document at the moment"}
-
+    model_client = get_model_client(request.app)
     db = get_mongo(request.app)
     if db is None:
         return {"success": False, "message": "Can't upload document at the moment"}
@@ -83,7 +83,7 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
         if chunks is not None:
             chunks = chunks[0]
             contents = [chunk["content"] for chunk in chunks]
-            embeddings = encodeChunksManual(contents,qdrant_client)
+            embeddings = encodeChunksManual(contents)
             if len(embeddings) == 0:
                 continue
             metadatas = [

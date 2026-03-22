@@ -222,7 +222,7 @@ async def handle_chat_response(request: Request):
                         }
                     },
                 )
-            chat_embeddings = encodeChunksManual([final_response],qdrant_client)
+            chat_embeddings = encodeChunksManual([final_response])
             add_to_collection(
                 ids=[str(timestamp)],
                 qdrant_client=qdrant_client,

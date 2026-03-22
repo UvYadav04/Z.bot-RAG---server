@@ -24,7 +24,7 @@ import os
 #     return list(chunks)
 
 
-from pdf_chunker_for_rag import CleanHybridPDFChunker
+from pdf_chunker_for_rag.chunk_creator import CleanHybridPDFChunker
 
 # Initialize the production chunker
 chunker = CleanHybridPDFChunker()
@@ -34,17 +34,21 @@ def chunk_text_manual(path, chunk_size=500, overlap=100):
     chunks = chunker.strategic_header_chunking(
         pdf_path=path, target_words_per_chunk=chunk_size
     )
+    # print(chunks)
     return chunks
 
 
-def get_embedding(text,client):
-    response = client.embeddings.create(model="text-embedding-3-small", input=text)
-    return response.data[0].embedding
+# def get_embedding(text,client):
+#     my_client = OpenAI(api_key=os.environ.get("OPEN_AI_KEY"))
+#     response = my_client.embeddings.create(model="text-embedding-3-small", input=text)
+#     return response.data[0].embedding
 
 
+from fastembed import TextEmbedding
+model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 @safeExecution
-def encodeChunksManual(chunks,client):
-    embeddings = [get_embedding(chunk,client) for chunk in chunks]
+def encodeChunksManual(chunks):
+    embeddings = list(model.embed(chunks))
     return embeddings
 
 

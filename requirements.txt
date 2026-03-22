@@ -15,3 +15,7 @@ openai
 
 qdrant_client
 mangum
+
+pymupdf
+pypdf
+fastembed
