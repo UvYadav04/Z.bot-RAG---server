@@ -13,8 +13,6 @@ emoji
 
 openai
 
-sentence-transformers
-
 docling
 qdrant_client
 mangum
