@@ -10,14 +10,10 @@ PyJWT
 contractions
 emoji
 
-transformers
-torch
 
 openai
 
 sentence-transformers
-
-pymupdf
 
 docling
 qdrant_client

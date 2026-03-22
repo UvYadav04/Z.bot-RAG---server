@@ -1,5 +1,4 @@
 import os
-import torch
 from utils.safeExecution import safeExecution
 from openai import OpenAI
 

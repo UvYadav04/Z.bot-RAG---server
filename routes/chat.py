@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Request
 from constants import creativity_levels
 from utils.safeExecution import safeExecution
-import torch
-import pymupdf
 import time
 import uuid
 from utils.orderDocs import orderDocument, orderChats,sort_docs,sort_chats
@@ -10,14 +8,13 @@ from fastapi.responses import StreamingResponse, Response
 from startupFunctions import get_model_client,get_mongo,get_qdrant
 
 # from server import llm_model,llm
-from Model.model import (
-    format_user_query,
-    format_messages,
-    generate_response,
-    text_to_tokens,
-    tokens_to_text,
-    text_to_tokens,
-)
+# from Model.model import (
+#     format_user_query,
+#     format_messages,
+#     text_to_tokens,
+#     tokens_to_text,
+#     text_to_tokens,
+# )
 
 from fastapi import UploadFile, File, Request, APIRouter
 import shutil

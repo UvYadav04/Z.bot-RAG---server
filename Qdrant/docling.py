@@ -3,19 +3,12 @@ from docling.chunking import HybridChunker
 from sentence_transformers import SentenceTransformer
 from utils.safeExecution import safeExecution
 import os
-import torch
 
 env = os.getenv("ENV", "DEVELOPMENT")
 
 converter = DocumentConverter()
 
-
-if env == "DEVELOPMENT":
-    device = "cpu"
-else:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-embedding_model = SentenceTransformer("BAAI/bge-small-en-v1.5", device=device)
+embedding_model = SentenceTransformer("BAAI/bge-small-en-v1.5")
 
 
 @safeExecution
