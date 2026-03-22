@@ -105,7 +105,7 @@ async def authenticate(request: Request, call_next):
                 key="session_id",
                 value=session_id,
                 httponly=True,
-                sameSite="none",
+                samesite="none",
                 expires=60 * 60 * 24,
                 secure=True,
                 path='/'

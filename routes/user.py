@@ -124,7 +124,7 @@ async def login(request: Request, response: Response):
         key="zensky-jwt-token",
         value=jwtToken,
         httponly=True,
-        sameSite="none",
+        samesite="none",
         secure=True,
         max_age=60 * 60 * 24 * 7,
         path="/",
@@ -133,7 +133,7 @@ async def login(request: Request, response: Response):
     response.delete_cookie(
         key="session_id",
         path="/",
-        sameSite="none",
+        samesite="none",
         secure=True,
         httponly=True,
     )
@@ -149,7 +149,7 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(
         key="zensky-jwt-token",
         path="/",
-        sameSite="none",
+        samesite="none",
         secure=True,
         httponly=True,
     )
@@ -157,7 +157,7 @@ async def logout(request: Request, response: Response):
     response.delete_cookie(
         key="session_id",
         path="/",
-        sameSite="none",
+        samesite="none",
         secure=True,
         httponly=True,
     )
