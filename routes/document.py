@@ -173,4 +173,4 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
                 os.remove(path)
                 logger.info(f"Deleted temp file: {path}")
 
-    return {"success": True, "documents": user_docs}s
+    return {"success": True, "documents": user_docs}
