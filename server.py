@@ -53,10 +53,10 @@ async def lifespan(app: FastAPI):
 
 origins_allowed = ["http://16.170.228.133/"]
 
-if type(origins_allowed) == list:
-    origins = origins_allowed.split(',')
-else:
-    origins = origins_allowed
+# if type(origins_allowed) == list:
+#     origins = origins_allowed.split(',')
+# else:
+origins = origins_allowed
 
 app = FastAPI(title="Basic FastAPI Server", version="1.0", lifespan=lifespan)
 
