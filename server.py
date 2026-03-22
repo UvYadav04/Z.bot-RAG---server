@@ -51,7 +51,8 @@ async def lifespan(app: FastAPI):
     print("Server shutting down...")
 
 
-origins_allowed = os.environ.get("ORIGINS")
+origins_allowed = ["http://16.170.228.133/"]
+
 if type(origins_allowed) == list:
     origins = origins_allowed.split(',')
 else:
