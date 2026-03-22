@@ -1,27 +1,27 @@
-from docling.document_converter import DocumentConverter
-from docling.chunking import HybridChunker
+# from docling.document_converter import DocumentConverter
+# from docling.chunking import HybridChunker
 from utils.safeExecution import safeExecution
 import os
 
-env = os.getenv("ENV", "DEVELOPMENT")
+# env = os.getenv("ENV", "DEVELOPMENT")
 
-converter = DocumentConverter()
-
-
-@safeExecution
-def parse_doc(doc):
-    result = converter.convert(doc)
-    document = result.document
-    return document
+# converter = DocumentConverter()
 
 
-@safeExecution
-def chunkDocs(doc, tokenizer):
+# @safeExecution
+# def parse_doc(doc):
+#     result = converter.convert(doc)
+#     document = result.document
+#     return document
 
-    chunker = HybridChunker(tokenizer=tokenizer, max_tokens=512, merge_peers=True)
 
-    chunks = chunker.chunk(dl_doc=doc)
-    return list(chunks)
+# @safeExecution
+# def chunkDocs(doc, tokenizer):
+
+#     chunker = HybridChunker(tokenizer=tokenizer, max_tokens=512, merge_peers=True)
+
+#     chunks = chunker.chunk(dl_doc=doc)
+#     return list(chunks)
 
 
 from pdf_chunker_for_rag import CleanHybridPDFChunker

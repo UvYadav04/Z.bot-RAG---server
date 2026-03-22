@@ -23,8 +23,6 @@ from datetime import datetime
 from utils.queryProcessing import queryPreprocessing
 
 from Qdrant.docling import (
-    parse_doc,
-    chunkDocs,
     chunk_text_manual,
     encodeChunksManual,
 )

@@ -3,8 +3,6 @@ from fastapi.responses import StreamingResponse
 from utils.safeExecution import safeExecution
 from typing import List
 from Qdrant.docling import (
-    parse_doc,
-    chunkDocs,
     chunk_text_manual,
     encodeChunksManual,
 )
