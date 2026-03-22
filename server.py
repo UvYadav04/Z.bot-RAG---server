@@ -15,7 +15,7 @@ import jwt
 from dotenv import load_dotenv
 from starlette.middleware.sessions import SessionMiddleware
 import uuid
-
+from mangum import Mangum
 load_dotenv()
 
 # sessions = {}
@@ -58,6 +58,8 @@ else:
     origins = origins_allowed
 
 app = FastAPI(title="Basic FastAPI Server", version="1.0", lifespan=lifespan)
+
+handler = Mangum(app)
 
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET"))
 

@@ -1,26 +1,23 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from huggingface_hub import login
 import os
 import torch
 from utils.safeExecution import safeExecution
 from openai import OpenAI
-from .utils import quant_configs
 
-MODEL_PATH = "Model/local"
-modelNames={
-    "Qwen/Qwen2.5-7B-Instruct":{
-        "model_name" : "Qwen/Qwen2.5-7B-Instruct",
-        "local_path" : f"{MODEL_PATH}/Qwen7.5B-Instruct"
-    },
-    "Qwen/Qwen2.5-0.5B-Instruct":{
-        "model_name" : "Qwen/Qwen2.5-0.5B-Instruct",
-        "local_path" : f"{MODEL_PATH}/Qwen0.5B-Instruct"
-    }
-}
+# MODEL_PATH = "Model/local"
+# modelNames={
+#     "Qwen/Qwen2.5-7B-Instruct":{
+#         "model_name" : "Qwen/Qwen2.5-7B-Instruct",
+#         "local_path" : f"{MODEL_PATH}/Qwen7.5B-Instruct"
+#     },
+#     "Qwen/Qwen2.5-0.5B-Instruct":{
+#         "model_name" : "Qwen/Qwen2.5-0.5B-Instruct",
+#         "local_path" : f"{MODEL_PATH}/Qwen0.5B-Instruct"
+#     }
+# }
 
-env = os.getenv("ENV", "DEVELOPMENT")
-MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct" if  env == "DEVELOPMENT"  else  "Qwen/Qwen2.5-7B-Instruct"
-@safeExecution
+# env = os.getenv("ENV", "DEVELOPMENT")
+# MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct" if  env == "DEVELOPMENT"  else  "Qwen/Qwen2.5-7B-Instruct"
+# @safeExecution
 # def load_model(model_name = MODEL_NAME, load_in=4):
 #     print("Logging into Hugging Face Hub...")
 #     # login()
@@ -64,7 +61,7 @@ MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct" if  env == "DEVELOPMENT"  else  "Qwen/
 #     print("Loaded model:", model_name)
 #     # print(tokenizer.chat_template)
 #     return model, tokenizer
-
+@safeExecution
 def load_model():
     client = OpenAI(
         api_key=os.environ.get("GROQ_API_KEY"),

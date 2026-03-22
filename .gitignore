@@ -144,3 +144,5 @@ Model/local
 ragEnv/
 chroma_db/
 uploads/
+lib
+*.zip

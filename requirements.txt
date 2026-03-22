@@ -12,8 +12,6 @@ emoji
 
 transformers
 torch
-huggingface_hub
-bitsandbytes
 
 openai
 
@@ -23,3 +21,4 @@ pymupdf
 
 docling
 qdrant_client
+mangum
