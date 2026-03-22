@@ -5,7 +5,6 @@ from typing import List
 from Qdrant.docling import (
     parse_doc,
     chunkDocs,
-    encodeChunks,
     chunk_text_manual,
     encodeChunksManual,
 )
@@ -86,7 +85,7 @@ async def handle_upload_doc(request: Request, files: List[UploadFile] = File(...
         if chunks is not None:
             chunks = chunks[0]
             contents = [chunk["content"] for chunk in chunks]
-            embeddings = encodeChunksManual(contents)
+            embeddings = encodeChunksManual(contents,qdrant_client)
             if len(embeddings) == 0:
                 continue
             metadatas = [

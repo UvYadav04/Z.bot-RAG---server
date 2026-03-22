@@ -1,14 +1,11 @@
 from docling.document_converter import DocumentConverter
 from docling.chunking import HybridChunker
-from sentence_transformers import SentenceTransformer
 from utils.safeExecution import safeExecution
 import os
 
 env = os.getenv("ENV", "DEVELOPMENT")
 
 converter = DocumentConverter()
-
-embedding_model = SentenceTransformer("BAAI/bge-small-en-v1.5")
 
 
 @safeExecution
@@ -40,14 +37,19 @@ def chunk_text_manual(path, chunk_size=500, overlap=100):
     return chunks
 
 
-@safeExecution
-def encodeChunksManual(chunks):
-    embeddings = embedding_model.encode(chunks, batch_size=4)
-    return embeddings
+def get_embedding(text,client):
+    response = client.embeddings.create(model="text-embedding-3-small", input=text)
+    return response.data[0].embedding
 
 
 @safeExecution
-def encodeChunks(chunks):
-    chunk_texts = [chunk.text for chunk in chunks]
-    embeddings = embedding_model.encode(chunk_texts, batch_size=4)
+def encodeChunksManual(chunks,client):
+    embeddings = [get_embedding(chunk,client) for chunk in chunks]
     return embeddings
+
+
+# @safeExecution
+# def encodeChunks(chunks):
+#     chunk_texts = [chunk.text for chunk in chunks]
+#     embeddings = embedding_model.encode(chunk_texts, batch_size=4)
+#     return embeddings

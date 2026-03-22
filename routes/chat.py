@@ -25,7 +25,6 @@ from utils.queryProcessing import queryPreprocessing
 from Qdrant.docling import (
     parse_doc,
     chunkDocs,
-    encodeChunks,
     chunk_text_manual,
     encodeChunksManual,
 )
@@ -225,7 +224,7 @@ async def handle_chat_response(request: Request):
                         }
                     },
                 )
-            chat_embeddings = encodeChunksManual([final_response])
+            chat_embeddings = encodeChunksManual([final_response],qdrant_client)
             add_to_collection(
                 ids=[str(timestamp)],
                 qdrant_client=qdrant_client,
