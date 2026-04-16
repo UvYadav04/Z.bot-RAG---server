@@ -3,9 +3,10 @@ from constants import creativity_levels
 from utils.safeExecution import safeExecution
 import time
 import uuid
-from utils.orderDocs import orderDocument, orderChats,sort_docs,sort_chats
+from utils.orderDocs import orderDocument, orderChats, sort_docs, sort_chats
 from fastapi.responses import StreamingResponse, Response
-from startupFunctions import get_model_client,get_mongo,get_qdrant
+from startupFunctions import get_model_client, get_mongo, get_qdrant
+
 
 # from server import llm_model,llm
 # from Model.model import (
@@ -31,11 +32,11 @@ from Qdrant.db import add_to_collection, query_qdrant_db
 router = APIRouter()
 
 
-
 import logging
 
 logger = logging.getLogger("chat_routes")
 logging.basicConfig(level=logging.INFO)
+
 
 @router.get("/chat/newChat")
 @safeExecution
@@ -52,6 +53,7 @@ def create_new_chat(request: Request):
         logger.warning("Session ID missing while creating chat")
 
     return {"success": True, "chatId": new_chat_id}
+
 
 @router.get("/chat/getChats")
 @safeExecution
@@ -115,6 +117,7 @@ async def setChatId(request: Request):
 
     return {"success": True}
 
+
 @router.post("/chat/query")
 @safeExecution
 async def handle_chat_response(request: Request):
@@ -130,7 +133,9 @@ async def handle_chat_response(request: Request):
     chat_id_using = selected_chat_id or chat_id
 
     logger.info(f"Incoming query | session_id={session_id} | user_id={user_id}")
-    logger.info(f"Chat selection | selected={selected_chat_id} | session_chat={chat_id} | using={chat_id_using}")
+    logger.info(
+        f"Chat selection | selected={selected_chat_id} | session_chat={chat_id} | using={chat_id_using}"
+    )
 
     document_ids = body.get("document_ids", [])
     query = queryPreprocessing(query)
@@ -154,6 +159,8 @@ async def handle_chat_response(request: Request):
         top_k=3,
         condition={"document_id": {"$in": document_ids}},
     )
+
+    print(relevant_docs)
 
     ordered_documents = sort_docs(relevant_docs)
 
@@ -187,10 +194,10 @@ async def handle_chat_response(request: Request):
         logger.error("Model client not available")
         return {"success": False, "message": "LLM error"}
 
-    content = "\n\n".join(ordered_documents + ordered_chats)
+    content = getPrompt("\n\n".join(ordered_documents + ordered_chats))
 
     messages = [
-        {"role": "system", "content": f"<context>{content}</context>"},
+        {"role": "system", "content": content},
         {"role": "user", "content": query},
     ]
 
@@ -212,7 +219,7 @@ async def handle_chat_response(request: Request):
                     response_tokens += content
                     yield content
 
-            final_response = query + response_tokens
+            final_response = response_tokens
             timestamp = datetime.now()
 
             logger.info(f"Saving chat response | chat_id={chat_id_using}")
@@ -259,12 +266,14 @@ async def handle_chat_response(request: Request):
                 qdrant_client=qdrant_client,
                 collection_name="chat_collection",
                 embeddings=chat_embeddings,
-                metadata=[{
-                    "session_id": session_id,
-                    "user_id": user_id or "no_user_id",
-                    "chat_id": chat_id_using,
-                    "text": final_response,
-                }],
+                metadata=[
+                    {
+                        "session_id": session_id,
+                        "user_id": user_id or "no_user_id",
+                        "chat_id": chat_id_using,
+                        "text": final_response,
+                    }
+                ],
             )
 
         except Exception as e:
@@ -272,3 +281,25 @@ async def handle_chat_response(request: Request):
             yield "Error generating response"
 
     return StreamingResponse(token_generator(), media_type="text/plain")
+
+
+def getPrompt(content):
+    return f"""
+        You are a helpful AI chat assistant.
+
+        You will be given context inside <context>...</context>.
+        Your job is to answer the user's question using ONLY this context.
+
+        Rules:
+        - Give short, clear, and direct answers.
+        - Do NOT explain unnecessarily.
+        - Do NOT add extra information outside the context.
+        - If the answer is not in the context, say: "I don't have enough information."
+        - Do NOT hallucinate or guess.
+        - Prefer bullet points if multiple items are needed.
+        - Keep responses concise and user-friendly.
+
+        <context>
+        {content}
+        </context>
+        """
